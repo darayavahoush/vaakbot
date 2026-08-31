@@ -1,7 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Figtree:wght@400;500;600&display=swap');
+
+:root {
+  --paper: #F8F2E4;
+  --paper-raised: #FFFFFF;
+  --line: #E5DAC3;
+  --ink: #2B2A28;
+  --ink-soft: #6B6459;
+
+  --forest: #3F6F63;
+  --forest-deep: #2B4A42;
+  --honey: #E3A542;
+  --honey-deep: #B87D1F;
+  --moss: #8AA36A;
+
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
 .shell {
   height: 100vh;
   display: flex;
   justify-content: center;
+  background: var(--paper);
+  font-family: var(--sans);
 }
 
 .frame {
@@ -13,27 +36,84 @@
   background: var(--paper);
 }
 
+/* ---------- header ---------- */
+
 .header {
-  padding: 28px 28px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 28px;
   border-bottom: 1px solid var(--line);
 }
+
+.header-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-blob {
+  position: absolute;
+  inset: 0;
+  border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+  background: linear-gradient(160deg, var(--honey) 0%, var(--moss) 100%);
+  opacity: 0.28;
+}
+
+.header-text { min-width: 0; }
 
 .wordmark {
   font-family: var(--serif);
   font-size: 26px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
-  color: var(--teal-deep);
+  color: var(--forest-deep);
   letter-spacing: -0.01em;
 }
 
 .tagline {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 4px 0 0;
+  font-size: 13.5px;
   color: var(--ink-soft);
   max-width: 46ch;
-  line-height: 1.4;
+  line-height: 1.45;
 }
+
+/* ---------- Milo mascot ---------- */
+
+.milo-body { fill: var(--forest); }
+.milo-wing { fill: var(--forest-deep); }
+.milo-tuft { fill: var(--forest-deep); }
+.milo-face { fill: var(--paper-raised); }
+.milo-chest { fill: var(--honey); }
+.milo-beak { fill: var(--honey-deep); }
+.milo-foot { fill: var(--honey-deep); }
+.milo-eye-white { fill: var(--paper-raised); }
+.milo-pupil { fill: var(--ink); transform-origin: center; transform-box: fill-box; }
+
+.milo-thinking .milo-eye-l .milo-pupil {
+  animation: blink 2.6s ease-in-out infinite;
+}
+.milo-thinking .milo-eye-r .milo-pupil {
+  animation: blink 2.6s ease-in-out infinite;
+  animation-delay: 0.08s;
+}
+
+@keyframes blink {
+  0%, 38%, 100% { transform: scaleY(1); }
+  42% { transform: scaleY(0.12); }
+  46% { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .milo-thinking .milo-pupil { animation: none; }
+}
+
+/* ---------- messages ---------- */
 
 .messages {
   flex: 1;
@@ -41,7 +121,22 @@
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.row-user { justify-content: flex-end; }
+.row-system { justify-content: center; }
+
+.avatar-small {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
 }
 
 .bubble {
@@ -51,10 +146,15 @@
   font-size: 14.5px;
   line-height: 1.5;
   white-space: pre-wrap;
+  animation: rise 0.18s ease-out;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .bubble.bot {
-  align-self: flex-start;
   background: var(--paper-raised);
   border: 1px solid var(--line);
   color: var(--ink);
@@ -62,47 +162,29 @@
 }
 
 .bubble.user {
-  align-self: flex-end;
   background: var(--honey);
   color: #3A2A12;
   border-bottom-right-radius: 4px;
 }
 
 .bubble.system {
-  align-self: center;
   background: transparent;
   color: var(--ink-soft);
   font-size: 13px;
   font-style: italic;
   text-align: center;
   max-width: 90%;
+  padding: 4px 12px;
 }
 
-.wave-indicator {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 15px;
+.thinking-note {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-soft);
+  padding: 6px 0;
 }
 
-.wave-indicator .bar {
-  width: 3px;
-  height: 10px;
-  background: var(--teal);
-  border-radius: 2px;
-  animation: wave 0.9s ease-in-out infinite;
-}
-
-.wave-indicator .bar:nth-child(2) { animation-delay: 0.12s; }
-.wave-indicator .bar:nth-child(3) { animation-delay: 0.24s; }
-.wave-indicator .bar:nth-child(4) { animation-delay: 0.36s; }
-.wave-indicator .bar:nth-child(5) { animation-delay: 0.48s; }
-
-@keyframes wave {
-  0%, 100% { height: 6px; opacity: 0.5; }
-  50% { height: 18px; opacity: 1; }
-}
+/* ---------- input ---------- */
 
 .input-row {
   display: flex;
@@ -125,15 +207,15 @@
 }
 
 .input-row input:focus {
-  border-color: var(--teal);
+  border-color: var(--forest);
   box-shadow: 0 0 0 3px rgba(63, 111, 99, 0.15);
 }
 
 .input-row button {
-  padding: 0 20px;
+  padding: 0 22px;
   border-radius: 22px;
   border: none;
-  background: var(--teal);
+  background: var(--forest);
   color: #fff;
   font-family: var(--sans);
   font-weight: 500;
@@ -143,7 +225,7 @@
 }
 
 .input-row button:hover:not(:disabled) {
-  background: var(--teal-deep);
+  background: var(--forest-deep);
 }
 
 .input-row button:disabled {
@@ -153,9 +235,11 @@
 
 .input-row button:focus-visible,
 .input-row input:focus-visible {
-  outline: 2px solid var(--teal-deep);
+  outline: 2px solid var(--forest-deep);
   outline-offset: 2px;
 }
+
+/* ---------- sources ---------- */
 
 .sources {
   margin-top: 10px;
@@ -193,7 +277,7 @@
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 500;
-  color: var(--teal-deep);
+  color: var(--forest-deep);
   cursor: pointer;
   text-decoration: none;
 }
@@ -211,4 +295,13 @@
   font-size: 13px;
   line-height: 1.45;
   color: var(--ink-soft);
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 480px) {
+  .header { padding: 18px 18px; gap: 12px; }
+  .messages { padding: 16px 14px; }
+  .bubble { max-width: 84%; }
+  .input-row { padding: 12px 14px; }
 }

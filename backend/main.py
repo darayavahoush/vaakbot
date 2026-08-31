@@ -30,6 +30,7 @@ AOAI_ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"]
 AOAI_KEY = os.environ["AZURE_OPENAI_KEY"]
 CHAT_DEPLOYMENT = os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-5.4-nano")
 EMBED_DEPLOYMENT = os.environ.get("AZURE_OPENAI_EMBED_DEPLOYMENT", "text-embedding-3-small")
+EMBED_DIM = 512  # must match ingest.py and the search index's vector field
 
 SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
 SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
@@ -89,7 +90,7 @@ sessions: Dict[str, List[dict]] = {}
 
 
 def embed(text: str):
-    resp = client.embeddings.create(model=EMBED_DEPLOYMENT, input=text)
+    resp = client.embeddings.create(model=EMBED_DEPLOYMENT, input=text, dimensions=EMBED_DIM)
     return resp.data[0].embedding
 
 

@@ -20,3 +20,4 @@ docs/
 # OS
 .DS_Store
 docs_upload/
+doc_html/

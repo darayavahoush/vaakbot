@@ -48,7 +48,7 @@ EMBED_DEPLOYMENT = os.environ["AZURE_OPENAI_EMBED_DEPLOYMENT"]
 SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
 SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
 INDEX_NAME = os.environ.get("AZURE_SEARCH_INDEX", "vaakbot-docs")
-EMBED_DIM = 1536  # text-embedding-3-small default
+EMBED_DIM = 512  # reduced from 1536 to fit Free-tier Search quota
 HTML_OUTPUT_DIR = os.environ.get("VAAKBOT_HTML_DIR", "./doc_html")
 
 QA_PATTERN = re.compile(r"^Q\d+:\s*(.+?)\s*A:\s*(.+)$", re.IGNORECASE)
@@ -147,6 +147,7 @@ def embed_all(client, chunks, batch_size=16):
         resp = client.embeddings.create(
             model=EMBED_DEPLOYMENT,
             input=[c["content"] for c in batch],
+            dimensions=EMBED_DIM,
         )
         for c, e in zip(batch, resp.data):
             c["embedding"] = e.embedding
