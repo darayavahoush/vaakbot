@@ -1,0 +1,31 @@
+
+.feedback-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.feedback-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.feedback-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--paper-raised);
+}
+
+.feedback-btn.active {
+  opacity: 1;
+  background: var(--honey);
+}
+
+.feedback-btn:disabled {
+  cursor: default;
+}

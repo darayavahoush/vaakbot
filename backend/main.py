@@ -8,9 +8,8 @@ import os
 import uuid
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from openai import AzureOpenAI
@@ -46,7 +45,7 @@ blob_service = BlobServiceClient(
 )
 
 TOP_K = 5
-MIN_SCORE = 0.75
+MIN_SCORE = 0.71
 MAX_TURNS = 5
 
 SYSTEM_PROMPT = """You are a warm, gentle companion for parents and caregivers asking
@@ -86,7 +85,13 @@ search_client = SearchClient(
     credential=AzureKeyCredential(SEARCH_KEY),
 )
 
-sessions: Dict[str, List[dict]] = {}
+import re
+from faq_lookup import FaqLookup
+from session_store import get_session, save_session
+from query_log import log_query, record_feedback
+
+faq = FaqLookup()
+VECTOR_CONFIDENCE_THRESHOLD = float(os.environ.get("VECTOR_CONFIDENCE_THRESHOLD", "0.78"))
 
 
 def embed(text: str):
@@ -141,16 +146,24 @@ class ChatResponse(BaseModel):
     reply: str
     restarted: bool
     sources: List[dict] = []
+    log_id: str | None = None
+    tier: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    log_id: str
+    tier: str
+    vote: str
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     session_id = req.session_id or str(uuid.uuid4())
-    history = sessions.setdefault(session_id, [])
+    history = get_session(session_id)
 
     user_turns = sum(1 for m in history if m["role"] == "user")
     if user_turns >= MAX_TURNS:
-        sessions[session_id] = []
+        save_session(session_id, [])
         return ChatResponse(
             session_id=session_id,
             reply=(
@@ -160,12 +173,63 @@ def chat(req: ChatRequest):
             restarted=True,
         )
 
-    hits = retrieve(req.message)
+    # Tier 0 — fuzzy FAQ match, no API call at all
+    faq_hit = faq.match(req.message)
+    if faq_hit:
+        reply = faq_hit["answer"]
+        log_id = log_query(session_id, req.message, "tier0", faq_hit["score"] / 100, reply)
+        history.append({"role": "user", "content": req.message})
+        history.append({"role": "assistant", "content": reply})
+        save_session(session_id, history)
+        sources = [{
+            "source": faq_hit["source"],
+            "section": "",
+            "snippet": reply[:400],
+            "doc_url": f"/api/docs/{quote(faq_hit['source'])}",
+        }]
+        return ChatResponse(session_id=session_id, reply=reply, restarted=False, sources=sources, log_id=log_id, tier="tier0")
+
+    # For follow-ups, fold the last SUCCESSFULLY-ANSWERED user turn into the
+    # retrieval query so pronouns/short questions ("what causes it", "what are
+    # early signs") can still find the right chunk. Tier 0 stays untouched
+    # (exact/fuzzy match on the raw message).
+    # Walk backward past any declined turns -- a decline carries no usable
+    # topic, so anchoring to it (or stopping at it) would either poison
+    # retrieval or leave genuinely answerable follow-ups with no context.
+    DECLINE_MARKER = "I don't have solid enough information"
+    prior_user_msg = None
+    for i in range(len(history) - 1, 0, -1):
+        if history[i]["role"] == "assistant" and history[i - 1]["role"] == "user":
+            if DECLINE_MARKER not in history[i]["content"]:
+                prior_user_msg = history[i - 1]["content"]
+                break
+    retrieval_query = f"{prior_user_msg} {req.message}" if prior_user_msg else req.message
+    hits = retrieve(retrieval_query)
+
+    # Tier 1 — vector search alone is confident enough, no chat completion
+    if hits and hits[0]["score"] >= VECTOR_CONFIDENCE_THRESHOLD:
+        top = hits[0]
+        m = re.match(r'^Q\d+[:.]\s*(.+?)\s*A\d*[:.]\s*(.+)$', top["content"].strip(), re.IGNORECASE | re.DOTALL)
+        reply = m.group(2).strip() if (m and len(m.group(1)) < 300) else top["content"]
+        log_id = log_query(session_id, req.message, "tier1", top["score"], reply)
+        history.append({"role": "user", "content": req.message})
+        history.append({"role": "assistant", "content": reply})
+        save_session(session_id, history)
+        sources = [{
+            "source": top["source"],
+            "section": top.get("section", ""),
+            "snippet": top["content"][:400],
+            "doc_url": f"/api/docs/{quote(top['source'])}",
+        }]
+        return ChatResponse(session_id=session_id, reply=reply, restarted=False, sources=sources, log_id=log_id, tier="tier1")
+
+    # Tier 2 — existing LLM RAG path, unchanged
     if not hits or hits[0]["score"] < MIN_SCORE:
         reply = (
             "I don't have solid enough information on that from what I've been given. "
             "It's best to check with a human on this one."
         )
+        tier = "none"
     else:
         context = "\n\n---\n\n".join(
             f"[Source: {h['source']}]\n{h['content']}" for h in hits
@@ -182,10 +246,13 @@ def chat(req: ChatRequest):
             max_completion_tokens=400,
         )
         reply = resp.choices[0].message.content
+        tier = "tier2"
+
+    log_id = log_query(session_id, req.message, tier, hits[0]["score"] if hits else 0.0, reply)
 
     history.append({"role": "user", "content": req.message})
     history.append({"role": "assistant", "content": reply})
-    sessions[session_id] = history
+    save_session(session_id, history)
 
     sources = []
     if hits and hits[0]["score"] >= MIN_SCORE:
@@ -202,7 +269,16 @@ def chat(req: ChatRequest):
                 "doc_url": f"/api/docs/{quote(h['source'])}",
             })
 
-    return ChatResponse(session_id=session_id, reply=reply, restarted=False, sources=sources)
+    return ChatResponse(session_id=session_id, reply=reply, restarted=False, sources=sources, log_id=log_id, tier=tier)
+
+
+@app.post("/api/feedback")
+def feedback(req: FeedbackRequest):
+    try:
+        record_feedback(req.log_id, req.tier, req.vote)
+    except Exception:
+        raise HTTPException(status_code=404, detail="log entry not found")
+    return {"ok": True}
 
 
 def extract_paragraphs(filename: str, raw_bytes: bytes):
@@ -281,4 +357,4 @@ def get_doc(filename: str):
     )
 
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Frontend is served separately via Vercel; no static mount needed here.

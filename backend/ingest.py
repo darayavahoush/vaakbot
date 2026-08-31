@@ -277,6 +277,23 @@ def main():
     print(f"Writing anchored HTML source pages to {HTML_OUTPUT_DIR} ...")
     generate_html_docs(chunks, HTML_OUTPUT_DIR)
 
+    print("Exporting FAQ lookup table ...")
+    import json, re
+    faq_pairs = []
+    qa_re = re.compile(r'^Q\d+[:.]\s*(.+?)\s*A\d*[:.]\s*(.+)$', re.IGNORECASE | re.DOTALL)
+    for c in chunks:
+        m = qa_re.match(c["content"].strip())
+        if m and len(m.group(1)) < 300:
+            faq_pairs.append({
+                "question": m.group(1).strip(),
+                "answer": m.group(2).strip(),
+                "source": c["source"],
+            })
+    faq_out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "faq_lookup.json")
+    with open(faq_out_path, "w") as f:
+        json.dump(faq_pairs, f)
+    print(f"✓ Exported {len(faq_pairs)} Q&A pairs to faq_lookup.json ({len(chunks) - len(faq_pairs)} chunks didn't match Q/A pattern — fine, they still get indexed normally)")
+
     print("Done.")
 
 

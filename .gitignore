@@ -1,23 +1,5 @@
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# Node
-node_modules/
-dist/
-
-# Env / secrets
+.env.local.sh
 .env
 .env.local
-*.pem
-
-# Docs / data (don't commit the client's actual reference docs)
-docs/
-*.zip
-
-# OS
-.DS_Store
-docs_upload/
-doc_html/
+__pycache__/
+*.pyc
