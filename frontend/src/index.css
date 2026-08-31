@@ -1,0 +1,31 @@
+:root {
+  --paper: #EEF2F0;
+  --paper-raised: #FFFFFF;
+  --ink: #26312D;
+  --ink-soft: #5C6B64;
+  --line: #DCE3DF;
+  --teal: #3F6F63;
+  --teal-deep: #2E5349;
+  --honey: #D9A05B;
+  --honey-deep: #B87E3C;
+
+  --serif: "Fraunces", Georgia, serif;
+  --sans: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--paper);
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
