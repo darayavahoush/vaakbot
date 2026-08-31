@@ -8,6 +8,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [sessionId, setSessionId] = useState(null)
+  const [expandedSource, setExpandedSource] = useState(null)
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -34,7 +35,11 @@ export default function App() {
       setSessionId(data.session_id)
       setMessages((m) => [
         ...m,
-        { role: data.restarted ? 'system' : 'bot', text: data.reply },
+        {
+          role: data.restarted ? 'system' : 'bot',
+          text: data.reply,
+          sources: data.sources || [],
+        },
       ])
     } catch (err) {
       setMessages((m) => [
@@ -50,23 +55,66 @@ export default function App() {
     if (e.key === 'Enter') sendMessage()
   }
 
+  function toggleSource(key) {
+    setExpandedSource((current) => (current === key ? null : key))
+  }
+
+  function openDoc(url) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div className="shell">
       <div className="frame">
         <header className="header">
           <h1 className="wordmark">vaakbot</h1>
           <p className="tagline">
-            Ask about the reference material — I'll answer from what I know,
-            and say so plainly if I don't.
+            Ask about the reference material - I will answer from what I know,
+            and say so plainly if I do not.
           </p>
         </header>
 
         <div className="messages" ref={scrollRef}>
-          {messages.map((m, i) => (
-            <div key={i} className={`bubble ${m.role}`}>
-              {m.text}
-            </div>
-          ))}
+          {messages.map((m, i) => {
+            const sources = m.sources || []
+            return (
+              <div key={i} className={`bubble ${m.role}`}>
+                {m.text}
+                {sources.length > 0 && (
+                  <div className="sources">
+                    {sources.map((s, j) => {
+                      const key = i + '-' + j
+                      const isOpen = expandedSource === key
+                      return (
+                        <div key={key} className="source-item">
+                          <div className="source-header">
+                            <span className="source-name">{s.source}</span>
+                            <button
+                              type="button"
+                              className="link-btn"
+                              onClick={() => toggleSource(key)}
+                            >
+                              {isOpen ? 'Hide' : 'Read more'}
+                            </button>
+                            <button
+                              type="button"
+                              className="link-btn"
+                              onClick={() => openDoc(s.doc_url)}
+                            >
+                              View full doc
+                            </button>
+                          </div>
+                          {isOpen && (
+                            <p className="source-snippet">{s.snippet}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
           {sending && (
             <div className="wave-indicator" aria-label="vaakbot is thinking">
               <span className="bar" />
