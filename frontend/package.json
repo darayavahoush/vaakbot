@@ -15,5 +15,20 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.0"
-  }
+  },
+  "description": "Chat interface for VaakBot clinical speech therapy and autism guidance assistant",
+  "homepage": "https://github.com/darayavahoush/vaakbot",
+  "author": "Ananya Sridhar",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darayavahoush/vaakbot.git"
+  },
+  "keywords": [
+    "chatbot",
+    "rag",
+    "speech-therapy",
+    "autism",
+    "react",
+    "vite"
+  ]
 }
